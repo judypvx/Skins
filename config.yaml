@@ -1,0 +1,7 @@
+auth:
+  partner_token: "vtges6eynpfhz4xqv5hzwf93e184h9wu55txpb9bc5tsb1c9j2rldpxcgznx6gte"
+ws:
+  endpoint: "wss://api.white.market/ws_endpoint?format=json"
+filters:
+  min_price: 1.00
+  max_price: 500.00
