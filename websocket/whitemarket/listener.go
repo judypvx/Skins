@@ -2,14 +2,9 @@ package whitemarket
 
 import (
     "encoding/json"
-    "fmt"
     "log"
-    "net"
-    "strings"
-    "syscall"
 
     "github.com/centrifugal/centrifuge-go"
-    "github.com/gorilla/websocket"
     "profitmaker/normalizer"
     "profitmaker/workerpool"
 )
@@ -34,22 +29,9 @@ type Product struct {
 }
 
 func StartWebSocket(token string, done chan bool) {
-    // Кастомный websocket dialer — отключаем IPv6
-    wsDialer := &websocket.Dialer{
-        NetDialContext: (&net.Dialer{
-            Control: func(network, address string, c syscall.RawConn) error {
-                if strings.HasPrefix(network, "tcp6") {
-                    return fmt.Errorf("IPv6 запрещён")
-                }
-                return nil
-            },
-        }).DialContext,
-    }
-
-    // Создаём WebSocket клиент, передаем кастомный WebsocketDialer
+    // Создаём WebSocket‑клиент, используя стандартные настройки библиотеки.
     client := centrifuge.NewJsonClient("wss://api.white.market/ws_endpoint", centrifuge.Config{
-        Token:     token,
-        Websocket: wsDialer,
+        Token: token,
     })
 
     client.OnConnected(func(e centrifuge.ConnectedEvent) {
@@ -69,6 +51,7 @@ func StartWebSocket(token string, done chan bool) {
         done <- true
     })
 
+    // Создаём подписку на канал "market_products_updates"
     sub, err := client.NewSubscription("market_products_updates", centrifuge.SubscriptionConfig{})
     if err != nil {
         log.Println("❌ Ошибка создания подписки:", err)
@@ -78,7 +61,8 @@ func StartWebSocket(token string, done chan bool) {
 
     sub.OnSubscribed(func(_ centrifuge.SubscribedEvent) {
         log.Println("📡 Подписка активна: market_products_updates")
-        workerpool.StartWorkerPool(20, 2000)
+        // Запускаем пул воркеров один раз
+        workerpool.StartWorkerPool(100, 500)
     })
 
     sub.OnPublication(func(e centrifuge.PublicationEvent) {
@@ -103,6 +87,7 @@ func StartWebSocket(token string, done chan bool) {
                 Price:    event.Content.Price,
             })
 
+            // Отправляем в очередь на анализ
             select {
             case workerpool.TaskQueue <- item:
             default:
@@ -111,6 +96,7 @@ func StartWebSocket(token string, done chan bool) {
         }
     })
 
+    // Подписываемся
     if err := sub.Subscribe(); err != nil {
         log.Println("❌ Ошибка подписки:", err)
         done <- true
@@ -118,12 +104,14 @@ func StartWebSocket(token string, done chan bool) {
     }
 
     log.Println("🟢 WebSocket клиент стартует")
-    err = client.Connect()
-    if err != nil {
+
+    // Подключаемся
+    if err := client.Connect(); err != nil {
         log.Println("❌ Ошибка подключения:", err)
         done <- true
         return
     }
 
-    select {} // бесконечно слушаем
+    // Блокируем горутину, слушаем события бесконечно
+    select {}
 }
