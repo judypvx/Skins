@@ -1,0 +1,24 @@
+auth:
+  partner_token: "vtges6eynpfhz4xqv5hzwf93e184h9wu55txpb9bc5tsb1c9j2rldpxcgznx6gte"
+
+ws:
+  endpoint: "wss://api.white.market/ws_endpoint?format=json"
+
+filters:
+  price:
+    min: 0.10
+    max: 500.00
+  liquidity:
+    min: 70
+  profit:
+    min: 5.0
+
+priceempire:
+  api_key: "736c5221-c12a-47be-ace9-0e3e831ddc13"
+  url: "https://api.pricempire.com/v4/paid/items/prices"
+  sources: "buff163"
+  currency: "USD"
+  metas: "liquidity,steam_last_7d,steam_last_30d,steam_last_90d,marketcap,trades_7d,trades_30d,trades_90d,count,rank,image"
+  avg: "true"
+  refresh_interval_minutes: 15
+  conversion_factor: 0.01
